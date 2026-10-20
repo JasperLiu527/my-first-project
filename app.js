@@ -109,6 +109,34 @@ function el(tag, attrs = {}, children = []) {
   return node;
 }
 
+// ---------- 确认框与提示 ----------
+
+function askConfirm(message, okLabel = '确定') {
+  const dialog = $('#confirm');
+  $('#confirm-text').textContent = message;
+  $('#confirm-ok').textContent = okLabel;
+  dialog.hidden = false;
+  $('#confirm-ok').focus();
+  return new Promise(resolve => {
+    const close = result => {
+      dialog.hidden = true;
+      $('#confirm-ok').onclick = $('#confirm-cancel').onclick = null;
+      resolve(result);
+    };
+    $('#confirm-ok').onclick = () => close(true);
+    $('#confirm-cancel').onclick = () => close(false);
+  });
+}
+
+let toastHandle = null;
+function showToast(message) {
+  const toast = $('#toast');
+  toast.textContent = message;
+  toast.hidden = false;
+  clearTimeout(toastHandle);
+  toastHandle = setTimeout(() => { toast.hidden = true; }, 2500);
+}
+
 // ---------- 标签切换 ----------
 
 document.querySelectorAll('.tab').forEach(tab => {
@@ -211,7 +239,7 @@ $('#finish-workout').addEventListener('click', () => {
   state.session = { date: dateKey(), day, done: {} };
   saveState();
   renderToday();
-  alert('训练已保存，干得漂亮！🎉');
+  showToast('训练已保存，干得漂亮！🎉');
 });
 
 // ---------- 休息计时器 ----------
@@ -242,7 +270,7 @@ function startTimer() {
     if (timerLeft === 0) {
       stopTimer();
       beep();
-      if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+      try { navigator.vibrate && navigator.vibrate([200, 100, 200]); } catch (e) { /* 不支持震动 */ }
     }
     renderTimer();
   }, 250);
@@ -336,18 +364,18 @@ function exerciseEditor(d, i) {
   return node;
 }
 
-$('#template-select').addEventListener('change', ev => {
+$('#template-select').addEventListener('change', async ev => {
   const key = ev.target.value;
   ev.target.value = '';
-  if (!key || !confirm('套用模板会覆盖当前的每周计划，确定吗？')) return;
+  if (!key || !(await askConfirm('套用模板会覆盖当前的每周计划，确定吗？', '套用'))) return;
   state.plan = applyTemplate(key);
   state.session = null;
   saveState();
   renderPlan();
 });
 
-$('#clear-plan').addEventListener('click', () => {
-  if (!confirm('确定清空整个每周计划吗？')) return;
+$('#clear-plan').addEventListener('click', async () => {
+  if (!(await askConfirm('确定清空整个每周计划吗？', '清空'))) return;
   state.plan = emptyPlan();
   state.session = null;
   saveState();
@@ -389,8 +417,8 @@ function renderHistory() {
           class: 'icon danger',
           title: '删除记录',
           text: '✕',
-          onclick: () => {
-            if (!confirm('删除这条训练记录？')) return;
+          onclick: async () => {
+            if (!(await askConfirm('删除这条训练记录？', '删除'))) return;
             state.history = state.history.filter(x => x.id !== h.id);
             saveState();
             renderHistory();
