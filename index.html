@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>锻炼计划</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="topbar">
+    <h1>💪 锻炼计划</h1>
+    <nav class="tabs">
+      <button class="tab active" data-view="today">今日训练</button>
+      <button class="tab" data-view="plan">每周计划</button>
+      <button class="tab" data-view="history">训练记录</button>
+    </nav>
+  </header>
+
+  <main>
+    <!-- 今日训练 -->
+    <section id="view-today" class="view active">
+      <div class="card">
+        <div class="row between">
+          <h2 id="today-title">今日训练</h2>
+          <select id="today-day" aria-label="选择训练日"></select>
+        </div>
+        <div id="today-list"></div>
+        <div class="progress"><div id="today-progress-bar"></div></div>
+        <p id="today-progress-text" class="muted"></p>
+        <button id="finish-workout" class="primary wide">完成训练并保存</button>
+      </div>
+
+      <div class="card timer-card">
+        <h3>组间休息计时</h3>
+        <div id="timer-display" class="timer">01:30</div>
+        <div class="row center gap">
+          <button class="chip" data-seconds="60">60秒</button>
+          <button class="chip" data-seconds="90">90秒</button>
+          <button class="chip" data-seconds="120">2分钟</button>
+          <button class="chip" data-seconds="180">3分钟</button>
+        </div>
+        <div class="row center gap">
+          <button id="timer-start" class="primary">开始</button>
+          <button id="timer-reset">重置</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 每周计划 -->
+    <section id="view-plan" class="view">
+      <div class="card">
+        <div class="row between wrap gap">
+          <h2>每周计划</h2>
+          <div class="row gap">
+            <select id="template-select" aria-label="选择模板">
+              <option value="">套用模板…</option>
+              <option value="beginner">新手全身（每周3练）</option>
+              <option value="ppl">推/拉/腿（每周6练）</option>
+              <option value="upperlower">上下肢分化（每周4练）</option>
+              <option value="home">居家徒手（每周3练）</option>
+            </select>
+            <button id="clear-plan" class="danger">清空</button>
+          </div>
+        </div>
+      </div>
+      <div id="plan-days"></div>
+    </section>
+
+    <!-- 训练记录 -->
+    <section id="view-history" class="view">
+      <div class="card">
+        <h2>训练统计</h2>
+        <div class="stats">
+          <div class="stat"><span id="stat-total">0</span><small>累计训练</small></div>
+          <div class="stat"><span id="stat-week">0</span><small>本周训练</small></div>
+          <div class="stat"><span id="stat-streak">0</span><small>连续周数</small></div>
+        </div>
+      </div>
+      <div id="history-list"></div>
+    </section>
+  </main>
+
+  <template id="exercise-row">
+    <div class="exercise-edit">
+      <input class="ex-name" placeholder="动作名称">
+      <label>组<input class="ex-sets" type="number" min="1" max="20"></label>
+      <label>次<input class="ex-reps" placeholder="8-12"></label>
+      <label>kg<input class="ex-weight" type="number" min="0" step="0.5"></label>
+      <button class="ex-remove icon" title="删除">✕</button>
+    </div>
+  </template>
+
+  <script src="app.js"></script>
+</body>
+</html>
