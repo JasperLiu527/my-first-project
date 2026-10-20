@@ -1,0 +1,552 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>左膝康复 14 天</title>
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#f2f5f9" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0c1420" media="(prefers-color-scheme: dark)">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" href="apple-touch-icon.png">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="左膝康复">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@500;600;700&display=swap">
+<style>
+html { color-scheme: light; padding-top: env(safe-area-inset-top, 0px); }
+body { margin: 0; }
+[hidden] { display: none !important; }
+/* Layout: one-column phone app — sticky day header, exercise list, fixed bottom tab bar; follow-along timer as a full-screen sheet */
+:root {
+  --bg: #f2f5f9;
+  --surface: #ffffff;
+  --surface-2: #e8eef6;
+  --fg: #12233d;
+  --muted: #5d6b80;
+  --line: #d7dfea;
+  --accent: #1d56b8;
+  --accent-ink: #ffffff;
+  --accent-soft: #dce7f9;
+  --ok: #1f8a4c;
+  --ok-soft: #dcf1e4;
+  --warn: #b86b00;
+  --warn-soft: #fbecd2;
+  --bad: #c3332b;
+  --bad-soft: #f9dedc;
+  --font-ui: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Noto Sans SC", "Microsoft YaHei", sans-serif;
+  --font-num: "Barlow Semi Condensed", -apple-system, "SF Pro Display", "Helvetica Neue", sans-serif;
+  --r: 14px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0c1420; --surface: #152132; --surface-2: #1d2c42; --fg: #e6edf7; --muted: #95a3b8; --line: #263852;
+    --accent: #6c9ef0; --accent-ink: #0b1626; --accent-soft: #1d3355;
+    --ok: #5cc98a; --ok-soft: #173a29; --warn: #f0b04f; --warn-soft: #3c2d14; --bad: #f07a72; --bad-soft: #43201e;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0c1420; --surface: #152132; --surface-2: #1d2c42; --fg: #e6edf7; --muted: #95a3b8; --line: #263852;
+  --accent: #6c9ef0; --accent-ink: #0b1626; --accent-soft: #1d3355;
+  --ok: #5cc98a; --ok-soft: #173a29; --warn: #f0b04f; --warn-soft: #3c2d14; --bad: #f07a72; --bad-soft: #43201e;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--fg); font-family: var(--font-ui); font-size: 15px; line-height: 1.5; -webkit-tap-highlight-color: transparent; }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--bg); }
+button { font: inherit; color: inherit; cursor: pointer; }
+button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.num { font-family: var(--font-num); font-variant-numeric: tabular-nums; }
+.wrap { max-width: 560px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 0 calc(88px + env(safe-area-inset-bottom, 0px)); }
+h1, h2, h3 { text-wrap: balance; margin: 0; }
+
+/* header */
+.top { max-width: 560px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--bg); padding-block: 12px 10px; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid var(--line); }
+.top .titles { flex: 1; min-width: 0; }
+.eyebrow { font-size: 12px; letter-spacing: .08em; color: var(--muted); font-weight: 600; }
+.top h1 { font-size: 22px; font-weight: 700; display: flex; align-items: baseline; gap: 8px; }
+.top h1 .num { font-size: 30px; line-height: 1; color: var(--accent); }
+.navbtn { width: 38px; height: 38px; border-radius: 50%; border: 1px solid var(--line); background: var(--surface); display: grid; place-items: center; font-size: 18px; }
+.navbtn:disabled { opacity: .35; cursor: default; }
+.ring { width: 52px; height: 52px; flex: none; }
+
+section.view { display: grid; gap: 14px; padding-top: 14px; }
+.phase { border-radius: var(--r); padding: 14px 16px; background: var(--accent); color: var(--accent-ink); display: grid; gap: 4px; }
+.phase .t { font-weight: 700; font-size: 17px; }
+.phase .d { font-size: 13px; opacity: .9; }
+.banner { border-radius: var(--r); padding: 12px 14px; font-size: 14px; display: grid; gap: 8px; }
+.banner.warn { background: var(--warn-soft); color: var(--fg); border: 1px solid color-mix(in srgb, var(--warn) 40%, transparent); }
+.banner.bad { background: var(--bad-soft); border: 1px solid color-mix(in srgb, var(--bad) 40%, transparent); }
+.banner.ok { background: var(--ok-soft); border: 1px solid color-mix(in srgb, var(--ok) 40%, transparent); }
+.banner b { font-weight: 700; }
+.link { background: none; border: 0; padding: 0; color: var(--accent); font-weight: 600; text-decoration: underline; text-underline-offset: 3px; justify-self: start; }
+
+/* exercise card */
+.ex { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 14px; display: grid; gap: 10px; }
+.ex.done { border-color: color-mix(in srgb, var(--ok) 55%, var(--line)); }
+.ex-head { display: flex; gap: 12px; align-items: flex-start; }
+.ex-no { width: 30px; height: 30px; border-radius: 50%; background: var(--accent-soft); color: var(--accent); font-family: var(--font-num); font-weight: 700; display: grid; place-items: center; flex: none; font-size: 17px; }
+.ex.done .ex-no { background: var(--ok); color: var(--surface); }
+.ex-title { flex: 1; min-width: 0; }
+.ex-title h3 { font-size: 17px; font-weight: 700; }
+.ex-title .dose { font-size: 13px; color: var(--muted); }
+.ex-title .dose .num { font-size: 15px; color: var(--fg); font-weight: 600; }
+.ex ul { margin: 0; padding-left: 18px; color: var(--muted); font-size: 14px; }
+.ex-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.sets { display: flex; gap: 6px; flex: 1; flex-wrap: wrap; }
+.set { min-width: 64px; height: 38px; border-radius: 10px; border: 1.5px dashed var(--line); background: transparent; font-size: 13px; color: var(--muted); padding: 0 10px; }
+.set.on { border-style: solid; border-color: var(--ok); background: var(--ok-soft); color: var(--ok); font-weight: 600; }
+.go { height: 38px; padding: 0 16px; border-radius: 10px; border: 0; background: var(--accent); color: var(--accent-ink); font-weight: 600; }
+
+/* pain */
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 16px; display: grid; gap: 12px; }
+.card h2 { font-size: 17px; }
+.card .sub { font-size: 13px; color: var(--muted); margin-top: -8px; }
+.painrow { display: grid; grid-template-columns: repeat(11, 1fr); gap: 4px; }
+.pv { height: 40px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface-2); font-family: var(--font-num); font-weight: 600; font-size: 17px; padding: 0; }
+.pv[data-z="g"].on { background: var(--ok); color: var(--surface); border-color: var(--ok); }
+.pv[data-z="y"].on { background: var(--warn); color: var(--surface); border-color: var(--warn); }
+.pv[data-z="r"].on { background: var(--bad); color: var(--surface); border-color: var(--bad); }
+.scale { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); }
+.checks { display: grid; gap: 8px; }
+.chk { display: flex; gap: 10px; align-items: center; font-size: 14px; }
+.chk input { width: 20px; height: 20px; accent-color: var(--accent); }
+textarea { width: 100%; min-height: 64px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface-2); color: var(--fg); font: inherit; padding: 10px; resize: vertical; }
+
+/* plan list */
+.days { display: grid; gap: 8px; }
+.day { display: grid; grid-template-columns: 54px 1fr auto; gap: 10px; align-items: center; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; text-align: left; width: 100%; }
+.day.today { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
+.day .dn { font-family: var(--font-num); font-weight: 700; font-size: 22px; line-height: 1; }
+.day .dn small { display: block; font-family: var(--font-ui); font-size: 11px; font-weight: 500; color: var(--muted); margin-top: 3px; }
+.day .meta { min-width: 0; font-size: 13px; color: var(--muted); }
+.day .meta b { color: var(--fg); font-weight: 600; font-size: 14px; display: block; }
+.pill { font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 99px; white-space: nowrap; }
+.pill.ok { background: var(--ok-soft); color: var(--ok); }
+.pill.part { background: var(--warn-soft); color: var(--warn); }
+.pill.none { background: var(--surface-2); color: var(--muted); }
+.pill.future { background: transparent; color: var(--muted); border: 1px dashed var(--line); }
+.grouphead { font-size: 13px; font-weight: 700; color: var(--muted); letter-spacing: .06em; margin-top: 6px; }
+
+/* stats */
+.stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.stat { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 12px; }
+.stat .v { font-family: var(--font-num); font-size: 30px; font-weight: 700; line-height: 1.1; }
+.stat .l { font-size: 12px; color: var(--muted); }
+.chart { width: 100%; height: auto; display: block; }
+
+/* guide */
+.list { margin: 0; padding-left: 20px; display: grid; gap: 6px; font-size: 14px; }
+.avoid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.avoid div { background: var(--bad-soft); color: var(--fg); border-radius: 10px; padding: 10px 6px; text-align: center; font-size: 13px; font-weight: 600; }
+.avoid div::before { content: "✕"; display: block; color: var(--bad); font-size: 16px; }
+.stairs { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.stairs div { background: var(--accent-soft); border-radius: 10px; padding: 12px; font-size: 14px; }
+.stairs b { display: block; font-size: 15px; color: var(--accent); }
+.field { display: flex; justify-content: space-between; align-items: center; gap: 12px; font-size: 14px; }
+.field input { font: inherit; border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; background: var(--surface-2); color: var(--fg); }
+.btn-ghost { border: 1px solid var(--line); background: var(--surface); border-radius: 10px; padding: 8px 14px; font-size: 14px; }
+.btn-danger { border: 0; background: var(--bad); color: var(--surface); border-radius: 10px; padding: 8px 14px; font-size: 14px; font-weight: 600; }
+.fine { font-size: 12px; color: var(--muted); }
+.sync { font-size: 12px; color: var(--muted); text-align: center; }
+
+/* tab bar */
+.tabs { position: fixed; left: 0; right: 0; bottom: 0; z-index: 6; background: color-mix(in srgb, var(--surface) 92%, transparent); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-top: 1px solid var(--line); display: grid; grid-template-columns: repeat(4, 1fr); padding: 6px max(8px, env(safe-area-inset-right, 0px)) calc(6px + env(safe-area-inset-bottom, 0px)) max(8px, env(safe-area-inset-left, 0px)); }
+.tabs button { border: 0; background: none; display: grid; justify-items: center; gap: 2px; padding: 4px 0; font-size: 11px; color: var(--muted); }
+.tabs button svg { width: 24px; height: 24px; }
+.tabs button[aria-selected="true"] { color: var(--accent); font-weight: 600; }
+
+/* timer sheet */
+.sheet { position: fixed; inset: 0; z-index: 20; background: var(--bg); display: grid; grid-template-rows: auto 1fr auto; padding: calc(16px + env(safe-area-inset-top, 0px)) max(20px, env(safe-area-inset-right, 0px)) calc(20px + env(safe-area-inset-bottom, 0px)) max(20px, env(safe-area-inset-left, 0px)); }
+.sheet-top { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.sheet-top h2 { font-size: 18px; }
+.sheet-mid { display: grid; place-items: center; align-content: center; gap: 14px; text-align: center; }
+.cue { font-size: 30px; font-weight: 700; min-height: 1.4em; }
+.big { position: relative; width: min(70vw, 280px); aspect-ratio: 1; max-width: 100%; }
+.big svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+.big .count { position: absolute; inset: 0; display: grid; place-items: center; font-family: var(--font-num); font-size: 96px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.progress-line { font-size: 16px; color: var(--muted); }
+.progress-line .num { font-size: 20px; color: var(--fg); font-weight: 600; }
+.sheet-bot { display: grid; grid-template-columns: 1fr 1.4fr 1fr; gap: 10px; }
+.sheet-bot button { height: 54px; border-radius: 14px; border: 1px solid var(--line); background: var(--surface); font-weight: 600; }
+.sheet-bot .primary { background: var(--accent); color: var(--accent-ink); border: 0; font-size: 17px; }
+.sheet.rest .cue { color: var(--ok); }
+.ring-track { stroke: var(--surface-2); }
+.ring-fill { stroke: var(--accent); transition: stroke-dashoffset .25s linear; }
+.sheet.rest .ring-fill { stroke: var(--ok); }
+.toggle { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); }
+.toggle input { accent-color: var(--accent); width: 18px; height: 18px; }
+
+.confirm { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-size: 14px; }
+@media (prefers-reduced-motion: reduce) { .ring-fill { transition: none; } }
+</style>
+
+</head>
+<body>
+<header class="top">
+  <button class="navbtn" id="prevDay" aria-label="前一天">‹</button>
+  <div class="titles">
+    <div class="eyebrow" id="dateLabel">左膝康复训练</div>
+    <h1 id="dayTitle">第 <span class="num">1</span> 天 <span style="font-size:15px;color:var(--muted);font-weight:500">/ 14</span></h1>
+  </div>
+  <button class="navbtn" id="nextDay" aria-label="后一天">›</button>
+  <svg class="ring" viewBox="0 0 52 52" aria-hidden="true">
+    <circle cx="26" cy="26" r="22" fill="none" class="ring-track" stroke-width="6"></circle>
+    <circle id="ringFill" cx="26" cy="26" r="22" fill="none" stroke-width="6" stroke-linecap="round" transform="rotate(-90 26 26)" style="stroke:var(--ok)" stroke-dasharray="138.2" stroke-dashoffset="138.2"></circle>
+    <text id="ringText" x="26" y="31" text-anchor="middle" font-size="14" font-weight="700" fill="currentColor" style="font-family:var(--font-num)">0%</text>
+  </svg>
+</header>
+
+<main class="wrap">
+  <section class="view" id="view-today"></section>
+  <section class="view" id="view-plan" hidden></section>
+  <section class="view" id="view-log" hidden></section>
+  <section class="view" id="view-guide" hidden></section>
+</main>
+
+<nav class="tabs" role="tablist">
+  <button role="tab" data-tab="today" aria-selected="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"></circle><path d="M8 12.5l2.5 2.5L16 9.5"></path></svg>今日训练</button>
+  <button role="tab" data-tab="plan" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3.5" y="5" width="17" height="15" rx="2"></rect><path d="M3.5 10h17M8 3v4M16 3v4"></path></svg>14天计划</button>
+  <button role="tab" data-tab="log" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 20V4M4 20h16M8 16v-4M12 16V8M16 16v-6"></path></svg>疼痛记录</button>
+  <button role="tab" data-tab="guide" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 11v6M12 7.5v.5"></path></svg>注意事项</button>
+</nav>
+
+<div class="sheet" id="sheet" hidden role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
+  <div class="sheet-top">
+    <h2 id="sheetTitle">跟练</h2>
+    <label class="toggle"><input type="checkbox" id="voiceToggle" checked> 语音提示</label>
+  </div>
+  <div class="sheet-mid">
+    <div class="cue" id="cue">准备</div>
+    <div class="big">
+      <svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="44" fill="none" class="ring-track" stroke-width="8"></circle><circle id="bigFill" cx="50" cy="50" r="44" fill="none" class="ring-fill" stroke-width="8" stroke-linecap="round" stroke-dasharray="276.5" stroke-dashoffset="0"></circle></svg>
+      <div class="count" id="count">3</div>
+    </div>
+    <div class="progress-line" id="progressLine"></div>
+  </div>
+  <div class="sheet-bot">
+    <button id="tStop">结束</button>
+    <button id="tPause" class="primary">暂停</button>
+    <button id="tSkip">跳过</button>
+  </div>
+</div>
+
+<script>
+(() => {
+  // ---------- plan data (from the 14-day left-knee plan) ----------
+  const EX = {
+    quad:  { name: "股四头肌等长收缩", tips: ["膝下垫毛巾卷，绷紧大腿前侧肌肉，膝盖向下压", "保持 5 秒，放松 5 秒"],
+             phases: [["绷紧，膝盖下压", 5, "work"], ["放松", 5, "rest"]] },
+    slr:   { name: "仰卧直腿抬高", tips: ["右腿屈膝支撑，左腿保持膝盖伸直", "缓慢抬高 20–30 cm，顶端停留 1 秒，缓慢放下"],
+             phases: [["先绷紧大腿，慢慢抬起", 3, "work"], ["顶端停留", 1, "work"], ["缓慢放下", 3, "work"], ["休息", 2, "rest"]] },
+    side:  { name: "侧卧抬腿（臀中肌）", tips: ["右侧卧，左腿在上，膝盖伸直", "缓慢抬高 20–30 cm，控制动作，身体不晃动"],
+             phases: [["慢慢抬起", 3, "work"], ["停留", 1, "work"], ["缓慢放下", 3, "work"], ["休息", 2, "rest"]] },
+    heel:  { name: "脚跟滑动屈膝", tips: ["脚跟沿床面缓慢向臀部滑动，再伸直", "在舒适范围内活动，不要强行深屈"],
+             phases: [["脚跟滑向臀部", 4, "work"], ["慢慢伸直", 4, "work"], ["休息", 2, "rest"]] },
+    bridge:{ name: "桥式（臀部）", tips: ["仰卧屈膝，双脚与髋同宽", "臀部发力抬起至肩、髋、膝一条线，再慢慢放下"],
+             phases: [["臀部发力抬起", 2, "work"], ["顶端停留", 2, "work"], ["缓慢放下", 3, "work"], ["休息", 2, "rest"]] },
+    sts:   { name: "高椅坐站", tips: ["选择较高的椅子，双脚与肩同宽", "缓慢起立和坐下，控制膝盖方向", "如疼痛明显，减少次数或暂停"],
+             phases: [["慢慢站起", 3, "work"], ["慢慢坐下", 4, "work"], ["休息", 3, "rest"]] },
+    walk:  { name: "平地慢走", tips: ["平地慢走 5–10 分钟，保持正常步幅", "不增加疼痛或肿胀"], timed: true }
+  };
+  const PHASES = [
+    { key: 1, title: "基础激活阶段", time: "每天 10–15 分钟",
+      desc: "以低负荷为主，恢复肌肉激活和关节活动度，让膝盖适应运动，不增加疼痛。",
+      list: [ ["quad", 10, 2, "10 次 × 2 组"], ["slr", 8, 2, "8 次 × 2 组"], ["side", 10, 2, "10 次 × 2 组"], ["heel", 10, 1, "10 次 × 1 组"] ] },
+    { key: 2, title: "力量提升阶段", time: "每天 15–20 分钟",
+      desc: "在第 1 周没有明显加重疼痛的前提下，逐步增加训练量，加入轻度负重动作。",
+      list: [ ["quad", 10, 2, "10 次 × 2 组"], ["slr", 10, 2, "10–12 次 × 2 组"], ["side", 10, 2, "10–12 次 × 2 组"],
+              ["bridge", 10, 2, "10 次 × 2 组"], ["sts", 5, 2, "5–8 次 × 1–2 组"], ["walk", 5, 1, "5–10 分钟"] ] }
+  ];
+  const SET_REST = 30;
+
+  // ---------- dates ----------
+  const pad = n => String(n).padStart(2, "0");
+  const ymd = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  const parse = s => { const [y, m, d] = s.split("-").map(Number); return new Date(y, m - 1, d); };
+  const addDays = (s, n) => { const d = parse(s); d.setDate(d.getDate() + n); return ymd(d); };
+  const diffDays = (a, b) => Math.round((Date.UTC(...b.split("-").map((v, i) => i === 1 ? v - 1 : +v)) - Date.UTC(...a.split("-").map((v, i) => i === 1 ? v - 1 : +v))) / 864e5);
+  const WD = "日一二三四五六";
+  const fmt = s => { const d = parse(s); return `${d.getMonth() + 1}月${d.getDate()}日 周${WD[d.getDay()]}`; };
+  const todayStr = () => ymd(new Date());
+
+  // ---------- state ----------
+  const LS = "knee14.v1";
+  let state = { start: todayStr(), log: {}, stayPhase1: false, updatedAt: 0 };
+  try { const s = JSON.parse(localStorage.getItem(LS) || "null"); if (s && s.start) state = Object.assign(state, s); } catch (e) {}
+  let viewDay = clampDay(diffDays(state.start, todayStr()) + 1);
+  let tab = "today";
+
+  function clampDay(n) { return Math.min(14, Math.max(1, n)); }
+  const dateOf = n => addDays(state.start, n - 1);
+  const entry = n => state.log[dateOf(n)] || (state.log[dateOf(n)] = { sets: {}, pain: null, swell: false, worse: false, note: "" });
+  const peek = n => state.log[dateOf(n)];
+  const week1Flag = () => { for (let i = 1; i <= 7; i++) { const e = peek(i); if (e && ((e.pain ?? 0) > 2 || e.swell || e.worse)) return true; } return false; };
+  const phaseFor = n => (n >= 8 && !state.stayPhase1) ? PHASES[1] : PHASES[0];
+  function completion(n) {
+    const e = peek(n), p = phaseFor(n);
+    const total = p.list.reduce((a, x) => a + x[2], 0);
+    if (!e) return { done: 0, total };
+    const done = p.list.reduce((a, [k, , sets]) => a + Math.min(sets, e.sets[k] || 0), 0);
+    return { done, total };
+  }
+
+  function save() {
+    state.updatedAt = Date.now();
+    try { localStorage.setItem(LS, JSON.stringify(state)); } catch (e) {}
+  }
+
+  // ---------- render ----------
+  const $ = id => document.getElementById(id);
+  const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  const zone = v => v <= 2 ? "g" : v <= 4 ? "y" : "r";
+
+  function renderHeader() {
+    const realDay = diffDays(state.start, todayStr()) + 1;
+    $("dateLabel").textContent = fmt(dateOf(viewDay)) + (viewDay === realDay ? " · 今天" : "");
+    $("dayTitle").innerHTML = `第 <span class="num">${viewDay}</span> 天 <span style="font-size:15px;color:var(--muted);font-weight:500">/ 14</span>`;
+    $("prevDay").disabled = viewDay <= 1; $("nextDay").disabled = viewDay >= 14;
+    const c = completion(viewDay), pct = c.total ? c.done / c.total : 0;
+    $("ringFill").setAttribute("stroke-dashoffset", (138.2 * (1 - pct)).toFixed(1));
+    $("ringText").textContent = Math.round(pct * 100) + "%";
+    document.querySelector(".top").hidden = tab !== "today";
+  }
+
+  function renderToday() {
+    const p = phaseFor(viewDay), e = entry(viewDay);
+    let h = `<div class="phase"><div class="t">第${p.key === 1 ? "1–7" : "8–14"}天 · ${p.title}</div><div class="d">${p.time}。${p.desc}</div></div>`;
+    if (viewDay >= 8 && week1Flag() && !state.stayPhase1) {
+      h += `<div class="banner warn"><div><b>第 1 周有疼痛超过 2 分或肿胀/加重的记录。</b>计划要求在第 1 周没有明显加重的前提下才进入力量阶段。</div><button class="link" data-act="stay1">继续做第 1 阶段动作</button></div>`;
+    } else if (state.stayPhase1 && viewDay >= 8) {
+      h += `<div class="banner ok"><div>你选择了继续做第 1 阶段动作，等膝盖状态稳定后再进阶。</div><button class="link" data-act="go2">切换到力量提升阶段</button></div>`;
+    }
+    const yest = viewDay > 1 ? peek(viewDay - 1) : null;
+    if (yest && ((yest.pain ?? 0) > 2 || yest.swell || yest.worse)) {
+      h += `<div class="banner warn"><div><b>前一天疼痛 ${yest.pain ?? "—"}/10${yest.swell ? "，有肿胀" : ""}${yest.worse ? "，疼痛加重" : ""}。</b>今天请降低负荷：减少次数或组数，动作幅度放小。</div></div>`;
+    }
+    p.list.forEach(([k, reps, sets, dose], i) => {
+      const ex = EX[k], n = Math.min(sets, e.sets[k] || 0);
+      h += `<article class="ex${n >= sets ? " done" : ""}">
+        <div class="ex-head"><div class="ex-no">${i + 1}</div><div class="ex-title"><h3>${ex.name}</h3><div class="dose"><span class="num">${dose}</span> · 每天</div></div></div>
+        <ul>${ex.tips.map(t => `<li>${t}</li>`).join("")}</ul>
+        <div class="ex-actions"><div class="sets">${Array.from({ length: sets }, (_, s) => `<button class="set${s < n ? " on" : ""}" data-act="set" data-k="${k}" data-s="${s}" aria-pressed="${s < n}">${s < n ? "✓ " : ""}${ex.timed ? "已完成" : `第 ${s + 1} 组`}</button>`).join("")}</div>
+        <button class="go" data-act="train" data-k="${k}" data-i="${i}">${ex.timed ? "开始计时" : "跟练"}</button></div>
+      </article>`;
+    });
+    const pv = e.pain;
+    h += `<div class="card"><h2>训练后疼痛</h2><div class="sub">目标：控制在 0–2 分。第二天不应加重。</div>
+      <div class="painrow">${Array.from({ length: 11 }, (_, v) => `<button class="pv${pv === v ? " on" : ""}" data-z="${zone(v)}" data-act="pain" data-v="${v}" aria-pressed="${pv === v}">${v}</button>`).join("")}</div>
+      <div class="scale"><span>0 不痛</span><span>5 中等</span><span>10 剧痛</span></div>
+      ${pv != null && pv > 2 ? `<div class="banner ${pv >= 5 ? "bad" : "warn"}">${pv >= 5 ? "<b>疼痛偏高。</b>明天暂停加量，只做最轻松的动作；如持续，请就医。" : "<b>超过 2 分。</b>明天减少次数或组数，降低负荷。"}</div>` : ""}
+      <div class="checks">
+        <label class="chk"><input type="checkbox" id="swell" ${e.swell ? "checked" : ""}> 出现肿胀</label>
+        <label class="chk"><input type="checkbox" id="worse" ${e.worse ? "checked" : ""}> 比前一天更痛</label>
+      </div>
+      <textarea id="note" placeholder="备注：上楼感觉、哪个动作不舒服……">${esc(e.note || "")}</textarea>
+    </div>
+    <div class="sync">记录保存在这台手机的 Safari 里</div>`;
+    $("view-today").innerHTML = h;
+    $("swell").onchange = ev => { entry(viewDay).swell = ev.target.checked; save(); renderAll(); };
+    $("worse").onchange = ev => { entry(viewDay).worse = ev.target.checked; save(); renderAll(); };
+    $("note").oninput = ev => { entry(viewDay).note = ev.target.value; save(); };
+  }
+
+  function renderPlan() {
+    const realDay = diffDays(state.start, todayStr()) + 1;
+    let h = "";
+    [[1, 7, PHASES[0]], [8, 14, PHASES[1]]].forEach(([a, b, p]) => {
+      h += `<div class="grouphead">第${a}–${b}天 · ${p.title} · ${p.time}</div><div class="days">`;
+      for (let n = a; n <= b; n++) {
+        const c = completion(n), e = peek(n);
+        let pill;
+        if (n > realDay) pill = `<span class="pill future">未开始</span>`;
+        else if (c.done >= c.total) pill = `<span class="pill ok">已完成</span>`;
+        else if (c.done > 0) pill = `<span class="pill part">${c.done}/${c.total} 组</span>`;
+        else pill = `<span class="pill none">未训练</span>`;
+        const pain = e && e.pain != null ? ` · 疼痛 ${e.pain}/10` : "";
+        h += `<button class="day${n === realDay ? " today" : ""}" data-act="open" data-n="${n}"><div class="dn">${n}<small>${n === realDay ? "今天" : "天"}</small></div><div class="meta"><b>${fmt(dateOf(n))}</b>${phaseFor(n).list.length} 个动作${pain}</div>${pill}</button>`;
+      }
+      h += `</div>`;
+    });
+    $("view-plan").innerHTML = h;
+  }
+
+  function renderLog() {
+    const realDay = clampDay(diffDays(state.start, todayStr()) + 1);
+    let full = 0, pains = [], over = 0;
+    for (let n = 1; n <= 14; n++) {
+      const c = completion(n); if (c.done >= c.total) full++;
+      const e = peek(n); if (e && e.pain != null) { pains.push(e.pain); if (e.pain > 2) over++; }
+    }
+    const avg = pains.length ? (pains.reduce((a, b) => a + b, 0) / pains.length).toFixed(1) : "—";
+    // chart
+    const W = 340, H = 180, L = 26, R = 8, T = 10, B = 26, cw = (W - L - R) / 14, y = v => T + (H - T - B) * (1 - v / 10);
+    let bars = "";
+    for (let n = 1; n <= 14; n++) {
+      const e = peek(n), x = L + cw * (n - 1);
+      if (e && e.pain != null) {
+        const col = e.pain <= 2 ? "var(--ok)" : e.pain <= 4 ? "var(--warn)" : "var(--bad)";
+        const top = e.pain === 0 ? y(0) - 2 : y(e.pain);
+        bars += `<rect x="${(x + cw * .18).toFixed(1)}" y="${top.toFixed(1)}" width="${(cw * .64).toFixed(1)}" height="${(y(0) - top).toFixed(1)}" rx="2" fill="${col}"></rect>`;
+        bars += `<text x="${(x + cw / 2).toFixed(1)}" y="${(top - 3).toFixed(1)}" text-anchor="middle" font-size="9" fill="var(--fg)">${e.pain}</text>`;
+      }
+      bars += `<text x="${(x + cw / 2).toFixed(1)}" y="${H - 10}" text-anchor="middle" font-size="9" fill="${n === realDay ? "var(--accent)" : "var(--muted)"}" font-weight="${n === realDay ? 700 : 400}">${n}</text>`;
+    }
+    const grid = [0, 2, 5, 10].map(v => `<line x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}" stroke="${v === 2 ? "var(--ok)" : "var(--line)"}" stroke-dasharray="${v === 2 ? "4 3" : ""}" stroke-width="1"></line><text x="${L - 5}" y="${y(v) + 3}" text-anchor="end" font-size="9" fill="var(--muted)">${v}</text>`).join("");
+    let h = `<div class="stats">
+      <div class="stat"><div class="v">${full}<span style="font-size:16px;color:var(--muted)">/14</span></div><div class="l">完整训练天数</div></div>
+      <div class="stat"><div class="v">${avg}</div><div class="l">平均疼痛</div></div>
+      <div class="stat"><div class="v" style="color:${over ? "var(--warn)" : "var(--ok)"}">${over}</div><div class="l">超过 2 分的天数</div></div>
+    </div>
+    <div class="card"><h2>每日训练后疼痛</h2><div class="sub">虚线为目标上限 2 分 · 横轴为第几天</div>
+      <svg class="chart num" viewBox="0 0 ${W} ${H}" role="img" aria-label="14 天疼痛评分柱状图">${grid}${bars}</svg>
+      ${pains.length ? "" : `<div class="fine">还没有记录。每次训练后在「今日训练」底部选择疼痛分数。</div>`}
+    </div>
+    <div class="card"><h2>设置</h2>
+      <div class="field"><label for="startDate">计划开始日期</label><input type="date" id="startDate" value="${state.start}"></div>
+      <div class="fine">更改开始日期会重新计算每天对应第几天，已记录的数据按日期保留。</div>
+      <div class="confirm" id="resetBox"><button class="btn-ghost" data-act="reset1">清除全部记录</button></div>
+    </div>`;
+    $("view-log").innerHTML = h;
+    $("startDate").onchange = ev => { if (!ev.target.value) return; state.start = ev.target.value; viewDay = clampDay(diffDays(state.start, todayStr()) + 1); save(); renderAll(); };
+  }
+
+  function renderGuide() {
+    $("view-guide").innerHTML = `
+    <div class="card"><h2>你的当前情况</h2><ul class="list">
+      <li>上楼疼痛 5/10，能正常上楼但有疼痛</li><li>无明显肿胀</li><li>能完全伸直，无卡锁</li><li>2026/03 MRI：外侧盘状半月板退变损伤</li></ul></div>
+    <div class="card"><h2>训练原则</h2><ul class="list">
+      <li>疼痛控制在 0–2/10</li><li>循序渐进，不硬撑</li><li>训练后或第二天不加重</li><li>如出现肿胀/加重，降低负荷</li><li>每天坚持 10–15 分钟</li></ul></div>
+    <div class="card"><h2>上下楼梯</h2><div class="stairs">
+      <div><b>上楼</b>健侧（右腿）先上，患侧（左腿）跟上</div>
+      <div><b>下楼</b>患侧（左腿）先下，健侧（右腿）跟下</div></div>
+      <div class="fine">尽量乘电梯，减少不必要的楼梯活动。</div></div>
+    <div class="card"><h2>暂时避免</h2><div class="avoid">
+      <div>跑步</div><div>跳跃/篮球</div><div>深蹲/弓步</div><div>骑行（暂缓）</div><div>跪地</div><div>负重转身</div></div></div>
+    <div class="card" style="border-color:color-mix(in srgb, var(--bad) 50%, var(--line))"><h2 style="color:var(--bad)">出现以下情况，请及时就医</h2><ul class="list">
+      <li>膝盖突然卡住，无法伸直</li><li>明显肿胀或反复肿胀</li><li>疼痛持续加重，影响日常生活</li><li>不能承重或明显跛行</li><li>膝关节红肿发热</li></ul></div>
+    <div class="card"><h2>放到 iPhone 主屏幕</h2><ol class="list">
+      <li>用 Safari 打开这个页面</li><li>点底部的「分享」按钮</li><li>选择「添加到主屏幕」</li></ol>
+      <div class="fine">之后就能像 App 一样从主屏幕打开。本页内容整理自你的康复计划，不替代医生或康复师的意见。</div></div>`;
+  }
+
+  function renderAll() {
+    renderHeader();
+    if (tab === "today") renderToday();
+    if (tab === "plan") renderPlan();
+    if (tab === "log") renderLog();
+    if (tab === "guide") renderGuide();
+  }
+
+  function setTab(t) {
+    tab = t;
+    document.querySelectorAll(".tabs button").forEach(b => b.setAttribute("aria-selected", b.dataset.tab === t));
+    ["today", "plan", "log", "guide"].forEach(v => $("view-" + v).hidden = v !== t);
+    renderAll(); window.scrollTo(0, 0);
+  }
+
+  // ---------- events ----------
+  document.querySelector(".tabs").addEventListener("click", ev => { const b = ev.target.closest("button"); if (b) setTab(b.dataset.tab); });
+  $("prevDay").onclick = () => { viewDay = clampDay(viewDay - 1); renderAll(); };
+  $("nextDay").onclick = () => { viewDay = clampDay(viewDay + 1); renderAll(); };
+  document.querySelector("main").addEventListener("click", ev => {
+    const b = ev.target.closest("[data-act]"); if (!b) return;
+    const a = b.dataset.act;
+    if (a === "set") { const e = entry(viewDay), s = +b.dataset.s, cur = e.sets[b.dataset.k] || 0; e.sets[b.dataset.k] = s < cur ? s : s + 1; save(); renderAll(); }
+    if (a === "pain") { const e = entry(viewDay), v = +b.dataset.v; e.pain = e.pain === v ? null : v; save(); renderAll(); }
+    if (a === "stay1") { state.stayPhase1 = true; save(); renderAll(); }
+    if (a === "go2") { state.stayPhase1 = false; save(); renderAll(); }
+    if (a === "open") { viewDay = +b.dataset.n; setTab("today"); }
+    if (a === "train") startTrainer(b.dataset.k, +b.dataset.i);
+    if (a === "reset1") { $("resetBox").innerHTML = `<span>确定清除 14 天的全部记录？</span><button class="btn-danger" data-act="reset2">清除</button><button class="btn-ghost" data-act="reset0">取消</button>`; }
+    if (a === "reset0") renderLog();
+    if (a === "reset2") { state.log = {}; state.stayPhase1 = false; save(); renderAll(); }
+  });
+
+  // ---------- follow-along trainer ----------
+  let T = null, audioCtx = null, wakeLock = null;
+  const voiceOn = () => $("voiceToggle").checked;
+  function beep(freq = 880, dur = 0.12) {
+    try {
+      audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+      const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+      o.frequency.value = freq; g.gain.value = 0.15; o.connect(g); g.connect(audioCtx.destination);
+      o.start(); o.stop(audioCtx.currentTime + dur);
+    } catch (e) {}
+  }
+  function say(t) {
+    if (!voiceOn()) return;
+    try { speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(t); u.lang = "zh-CN"; u.rate = 1.05; speechSynthesis.speak(u); } catch (e) {}
+  }
+  function buildSteps(k, reps, sets) {
+    const ex = EX[k], steps = [{ label: "准备", s: 3, kind: "rest", set: 1, rep: 0 }];
+    if (ex.timed) { steps.push({ label: "平地慢走", s: reps * 60, kind: "work", set: 1, rep: 0, finishSet: 1 }); return steps; }
+    for (let s = 1; s <= sets; s++) {
+      for (let r = 1; r <= reps; r++) ex.phases.forEach(([label, secs, kind], pi) => {
+        if (kind === "rest" && r === reps) return;
+        steps.push({ label, s: secs, kind, set: s, rep: r, say: pi === 0 && r > 1 ? `第${r}次，${label}` : label });
+      });
+      if (s < sets) steps.push({ label: "组间休息", s: SET_REST, kind: "rest", set: s + 1, rep: 0 });
+    }
+    // mark the last work phase of each set as finishing it
+    steps.forEach((st, i) => { if (st.kind === "work" && st.rep === reps && (!steps[i + 1] || steps[i + 1].set !== st.set || steps[i + 1].rep === 0)) st.finishSet = st.set; });
+    return steps;
+  }
+  function startTrainer(k, i) {
+    const p = phaseFor(viewDay), [, reps, sets] = p.list[i], ex = EX[k];
+    T = { k, reps, sets, ex, steps: buildSteps(k, reps, sets), idx: 0, left: 3, paused: false, day: viewDay, tick: null };
+    $("sheetTitle").textContent = ex.name;
+    $("sheet").hidden = false; $("tPause").textContent = "暂停";
+    try { navigator.wakeLock && navigator.wakeLock.request("screen").then(w => wakeLock = w).catch(() => {}); } catch (e) {}
+    beep(660); enterStep();
+    T.tick = setInterval(tick, 1000);
+  }
+  function enterStep() {
+    const st = T.steps[T.idx]; T.left = st.s;
+    $("sheet").classList.toggle("rest", st.kind === "rest");
+    $("cue").textContent = st.label;
+    say(st.say || st.label);
+    paintTimer();
+  }
+  function paintTimer() {
+    const st = T.steps[T.idx];
+    const mm = T.left >= 60 ? `${Math.floor(T.left / 60)}:${pad(T.left % 60)}` : T.left;
+    $("count").textContent = mm;
+    $("count").style.fontSize = T.left >= 60 ? "72px" : "";
+    $("bigFill").setAttribute("stroke-dashoffset", (276.5 * (1 - T.left / st.s)).toFixed(1));
+    $("progressLine").innerHTML = T.ex.timed ? `目标 <span class="num">5–10</span> 分钟，感觉良好可继续走` :
+      st.rep ? `第 <span class="num">${st.set}</span>/${T.sets} 组 · 第 <span class="num">${st.rep}</span>/${T.reps} 次` : `下一组：第 <span class="num">${st.set}</span>/${T.sets} 组`;
+  }
+  function tick() {
+    if (T.paused) return;
+    T.left--;
+    if (T.left <= 3 && T.left > 0 && T.steps[T.idx].kind === "rest" && T.steps[T.idx].s > 5) beep(520, .08);
+    if (T.left <= 0) return advance();
+    paintTimer();
+  }
+  function advance() {
+    const st = T.steps[T.idx];
+    if (st.finishSet) { const e = entry(T.day); e.sets[T.k] = Math.max(e.sets[T.k] || 0, st.finishSet); save(); }
+    T.idx++;
+    if (T.idx >= T.steps.length) return finish(true);
+    beep(T.steps[T.idx].kind === "work" ? 880 : 600); enterStep();
+  }
+  function finish(done) {
+    clearInterval(T.tick);
+    if (done) { beep(990, .25); say("完成，记得记录疼痛分数"); }
+    T = null; $("sheet").hidden = true;
+    try { wakeLock && wakeLock.release(); } catch (e) {} wakeLock = null;
+    renderAll();
+  }
+  $("tPause").onclick = () => { if (!T) return; T.paused = !T.paused; $("tPause").textContent = T.paused ? "继续" : "暂停"; if (T.paused) try { speechSynthesis.cancel(); } catch (e) {} };
+  $("tSkip").onclick = () => { if (T) advance(); };
+  $("tStop").onclick = () => { if (T) { try { speechSynthesis.cancel(); } catch (e) {} finish(false); } };
+
+  renderAll();
+
+})();
+</script>
+</body>
+</html>
