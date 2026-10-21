@@ -1,5 +1,5 @@
 // Offline support: network first for the page, cache first for static files.
-const CACHE = "knee14-v3";
+const CACHE = "knee14-v4";
 const FILES = ["./", "./index.html", "./manifest.webmanifest", "./apple-touch-icon.png", "./icon-512.png"];
 
 self.addEventListener("install", e => {
