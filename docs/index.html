@@ -50,7 +50,8 @@ html { padding-top: env(safe-area-inset-top, 0px); background: var(--bg); }
 body { margin: 0; background: var(--bg); color: var(--fg); font-family: var(--font); font-size: 17px; line-height: 1.35; letter-spacing: -.01em; -webkit-tap-highlight-color: transparent; -webkit-text-size-adjust: 100%; }
 body.locked { overflow: hidden; }
 [hidden] { display: none !important; }
-button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
+button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; touch-action: manipulation; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+.tabs, .strip, .scale, .ctrls { -webkit-user-select: none; user-select: none; }
 button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
 .r { font-family: var(--round); font-variant-numeric: tabular-nums; }
 h1, h2, h3 { margin: 0; text-wrap: balance; }
@@ -209,6 +210,11 @@ textarea::placeholder { color: var(--fg-3); }
 .steps { margin: 0; padding: 0; list-style: none; }
 .sn { width: 24px; height: 24px; border-radius: 50%; background: var(--fill); display: grid; place-items: center; font-family: var(--round); font-size: 13px; font-weight: 700; flex: none; }
 
+.stepper { display: flex; align-items: center; background: var(--fill); border-radius: 9px; height: 34px; flex: none; }
+.stepper button { width: 46px; height: 34px; font-size: 22px; font-weight: 400; color: var(--fg); }
+.stepper button:disabled { color: var(--fg-3); }
+.stepper span { min-width: 64px; text-align: center; font-size: 15px; font-weight: 600; border-inline: .5px solid var(--sep); line-height: 22px; }
+
 /* workout timer */
 .timer { position: fixed; inset: 0; z-index: 30; background: var(--bg); display: grid; grid-template-rows: auto 1fr auto; padding: calc(10px + env(safe-area-inset-top, 0px)) max(20px, env(safe-area-inset-right, 0px)) calc(24px + env(safe-area-inset-bottom, 0px)) max(20px, env(safe-area-inset-left, 0px)); }
 .timer-top { display: flex; justify-content: space-between; align-items: center; min-height: 44px; gap: 12px; }
@@ -238,7 +244,7 @@ textarea::placeholder { color: var(--fg-3); }
 .circ.pause { background: color-mix(in srgb, var(--orange) 25%, transparent); color: var(--orange); }
 .skip { color: var(--blue); font-size: 17px; padding: 10px; }
 
-.toast { position: fixed; left: 50%; bottom: calc(100px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); z-index: 40; background: rgba(40,40,40,.92); color: #fff; padding: 10px 16px; border-radius: 12px; font-size: 15px; max-width: calc(100% - 40px); text-align: center; }
+.toast { position: fixed; left: 50%; bottom: calc(100px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); z-index: 40; background: rgba(40,40,40,.92); color: #fff; padding: 10px 16px; border-radius: 12px; font-size: 15px; width: max-content; max-width: calc(100% - 40px); text-align: center; }
 
 @media (prefers-reduced-motion: reduce) { .sheet, .scrim, .arc, .nav, .sw, .sw::after { transition: none; } }
 </style>
@@ -330,11 +336,11 @@ textarea::placeholder { color: var(--fg-3); }
   const PHASES = [
     { key: 1, title: "基础激活", time: "每天 10–15 分钟", range: "第 1–7 天",
       desc: "以低负荷为主，恢复肌肉激活和关节活动度，让膝盖适应运动，不增加疼痛。",
-      list: [["quad", 10, 2, "10 次 × 2 组"], ["slr", 8, 2, "8 次 × 2 组"], ["side", 10, 2, "10 次 × 2 组"], ["heel", 10, 1, "10 次 × 1 组"]] },
+      list: [["quad", 10, 2, "10 次 × 2 组", 10], ["slr", 8, 2, "8 次 × 2 组", 8], ["side", 10, 2, "10 次 × 2 组", 10], ["heel", 10, 1, "10 次 × 1 组", 10]] },
     { key: 2, title: "力量提升", time: "每天 15–20 分钟", range: "第 8–14 天",
       desc: "在第 1 周没有明显加重疼痛的前提下，逐步增加训练量，加入轻度负重动作。",
-      list: [["quad", 10, 2, "10 次 × 2 组"], ["slr", 10, 2, "10–12 次 × 2 组"], ["side", 10, 2, "10–12 次 × 2 组"],
-             ["bridge", 10, 2, "10 次 × 2 组"], ["sts", 5, 2, "5–8 次 × 1–2 组"], ["walk", 5, 1, "5–10 分钟"]] }
+      list: [["quad", 10, 2, "10 次 × 2 组", 10], ["slr", 10, 2, "10–12 次 × 2 组", 12], ["side", 10, 2, "10–12 次 × 2 组", 12],
+             ["bridge", 10, 2, "10 次 × 2 组", 10], ["sts", 5, 2, "5–8 次 × 1–2 组", 8], ["walk", 5, 1, "5–10 分钟", 10]] }
   ];
 
   // ---------- dates ----------
@@ -367,6 +373,10 @@ textarea::placeholder { color: var(--fg-3); }
   const flagged = e => !!e && ((e.pain ?? 0) > 2 || e.swell || e.worse);
   const week1Flag = () => { for (let i = 1; i <= 7; i++) if (flagged(peek(i))) return true; return false; };
   const phaseFor = n => (n >= 8 && !state.stayPhase1) ? PHASES[1] : PHASES[0];
+  // per-exercise reps (minutes for walking), adjustable within the plan's range; lowered when the knee hurts
+  const repKey = (p, k) => p.key + ":" + k;
+  const repsFor = (p, i) => { const [k, reps, , , max] = p.list[i], v = (state.reps || {})[repKey(p, k)]; return v ? Math.min(max, v) : reps; };
+  const doseText = (p, i) => { const [k, , sets] = p.list[i], r = repsFor(p, i); return EX[k].timed ? `${r} 分钟` : `${r} 次 × ${sets} 组`; };
   function completion(n) {
     const e = peek(n), p = phaseFor(n);
     const total = p.list.reduce((a, x) => a + x[2], 0);
@@ -442,6 +452,8 @@ textarea::placeholder { color: var(--fg-3); }
 
     // notices
     const notes = [];
+    if (rd > 14) notes.push(`<div class="note ok">${I.ok}<div class="bd"><div><b>14 天计划已经结束。</b>可以在「趋势」里看整体情况，带着记录去复诊；之后怎么练请听康复师的安排。</div></div></div>`);
+    if (rd < 1) notes.push(`<div class="note info">${I.info}<div class="bd"><div><b>计划从 ${fmt(state.start)} 开始。</b>可以先熟悉动作，开始日期在「设置」里修改。</div></div></div>`);
     const now = new Date(), [rh, rm] = S.remindTime.split(":").map(Number);
     if (isToday && c.pct < 1 && S.remindOn && (now.getHours() * 60 + now.getMinutes()) >= rh * 60 + rm)
       notes.push(`<div class="note info">${I.bell}<div class="bd"><div><b>该训练了。</b>今天还剩 ${c.total - c.done} 组，大约 ${p.key === 1 ? "10" : "15"} 分钟。</div></div></div>`);
@@ -458,6 +470,7 @@ textarea::placeholder { color: var(--fg-3); }
     h += `<div class="phase-row"><h2>训练动作</h2><span>${p.time}</span></div><div class="group">`;
     p.list.forEach(([k, , sets, dose], i) => {
       const ex = EX[k], n = Math.min(sets, e.sets[k] || 0);
+      if (repsFor(p, i) !== p.list[i][1]) dose = doseText(p, i) + "（已调整）";
       const st = n >= sets ? `<span class="chk on">${CHECK}</span>` : n > 0 ? `<span class="chk part" style="--p:${(n / sets * 100).toFixed(0)}%"></span>` : `<span class="chk"></span>`;
       h += `<button class="cell tap ex" data-act="ex" data-i="${i}"><span class="thumb">${ILLO[k]}</span>
         <span class="main"><span class="t" style="display:block">${ex.name}</span><span class="s" style="display:block">${dose}</span></span>
@@ -600,7 +613,7 @@ textarea::placeholder { color: var(--fg-3); }
         <button class="cell tap" data-act="import">${icon("var(--blue)", I.box)}<span class="main lnk">从备份恢复</span></button>
         <button class="cell tap" data-act="reset">${icon("var(--red)", I.trash)}<span class="main lnk red">清除全部记录</span></button>
       </div><div class="ft">记录只保存在这台 iPhone 上。删除主屏幕图标或清除 Safari 网站数据会丢失记录，建议偶尔导出备份。</div>
-      <div class="ft" style="padding-top:22px;text-align:center">左膝康复 14 天 · 2.0</div>`;
+      <div class="ft" style="padding-top:22px;text-align:center">左膝康复 14 天 · 2.1</div>`;
 
     $("startDate").onchange = ev => { if (!ev.target.value) return; state.start = ev.target.value; viewDay = clampDay(realDay()); save(); renderSet(); };
     ["remindOn", "checkOn", "voice"].forEach(id => $(id).onchange = ev => { S[id] = ev.target.checked; save(); renderSet(); });
@@ -641,10 +654,10 @@ textarea::placeholder { color: var(--fg-3); }
       if (navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file], title: name }); return; }
     } catch (e) { if (e && e.name === "AbortError") return; }
     try { await navigator.clipboard.writeText(json); toast("备份已复制，可以粘贴到备忘录保存"); }
-    catch (e) { openSheet("导出备份", `<div class="group"><div class="cell"><textarea readonly rows="8" style="font-size:13px">${esc(json)}</textarea></div></div><div class="ft">长按全选并复制，保存到备忘录。</div>`); }
+    catch (e) { openSheet("导出备份", `<div class="group"><div class="cell"><textarea readonly rows="8" style="font-size:16px">${esc(json)}</textarea></div></div><div class="ft">长按全选并复制，保存到备忘录。</div>`); }
   }
   function importSheet() {
-    openSheet("从备份恢复", `<div class="group"><div class="cell"><textarea id="impText" rows="7" placeholder="粘贴之前导出的备份内容" style="font-size:13px"></textarea></div></div>
+    openSheet("从备份恢复", `<div class="group"><div class="cell"><textarea id="impText" rows="7" placeholder="粘贴之前导出的备份内容" style="font-size:16px"></textarea></div></div>
       <div class="ft">也可以选择备份文件：</div><div class="group" style="margin-top:6px"><label class="cell tap"><span class="main lnk">选择文件…</span><input type="file" id="impFile" accept="application/json,.json,text/plain" hidden></label></div>
       <div style="margin-top:16px"><button class="btn" data-act="import-go">恢复，覆盖当前记录</button></div>`);
     $("impFile").onchange = ev => { const f = ev.target.files[0]; if (!f) return; const r = new FileReader(); r.onload = () => $("impText").value = r.result; r.readAsText(f); };
@@ -674,8 +687,12 @@ textarea::placeholder { color: var(--fg-3); }
   }
   function exSheet(i) {
     const p = phaseFor(viewDay), [k, , sets, dose] = p.list[i], ex = EX[k], e = entry(viewDay), n = Math.min(sets, e.sets[k] || 0);
+    const r = repsFor(p, i), max = p.list[i][4], min = 3, unit = ex.timed ? "分钟" : "次";
     openSheet(ex.name, `<div class="illo">${ILLO[k]}</div>
-      <div class="gt">${dose} · 每天</div><div class="group" style="--inset:52px"><ol class="steps">${ex.steps.map((s, j) => `<li class="cell"><span class="sn">${j + 1}</span><span class="main">${s}</span></li>`).join("")}</ol></div>
+      <div class="gt">计划：${dose} · 每天</div>
+      <div class="group"><div class="cell"><span class="main"><span class="t" style="display:block">${ex.timed ? "时长" : "每组次数"}</span><span class="s" style="display:block">${r < p.list[i][1] ? "已减量，膝盖舒服后再加回来" : "疼痛超过 2 分时可以减少"}</span></span>
+        <div class="stepper"><button data-act="reps" data-i="${i}" data-d="-1" ${r <= min ? "disabled" : ""} aria-label="减少">−</button><span class="r">${r} ${unit}</span><button data-act="reps" data-i="${i}" data-d="1" ${r >= max ? "disabled" : ""} aria-label="增加">+</button></div></div></div>
+      <div class="gt">做法</div><div class="group" style="--inset:52px"><ol class="steps">${ex.steps.map((s, j) => `<li class="cell"><span class="sn">${j + 1}</span><span class="main">${s}</span></li>`).join("")}</ol></div>
       <div class="gt">打卡</div><div class="group" style="--inset:16px">${Array.from({ length: sets }, (_, s) => `<button class="cell tap" data-act="set" data-k="${k}" data-s="${s}" data-i="${i}"><span class="main">${ex.timed ? "已完成" : `第 ${s + 1} 组`}</span><span class="chk${s < n ? " on" : ""}">${s < n ? CHECK : ""}</span></button>`).join("")}</div>
       <div style="margin-top:16px"><button class="btn" data-act="train" data-i="${i}">${I.play}${ex.timed ? "开始计时" : "开始跟练"}</button></div>`);
   }
@@ -719,6 +736,13 @@ textarea::placeholder { color: var(--fg-3); }
       const idx = p.list.map((x, i) => i).filter(i => (e.sets[p.list[i][0]] || 0) < p.list[i][2]);
       if (idx.length) startRun(idx);
     }
+    else if (a === "reps") {
+      const p = phaseFor(viewDay), i = +b.dataset.i, k = p.list[i][0];
+      const v = Math.max(3, Math.min(p.list[i][4], repsFor(p, i) + +b.dataset.d));
+      state.reps = state.reps || {};
+      if (v === p.list[i][1]) delete state.reps[repKey(p, k)]; else state.reps[repKey(p, k)] = v;
+      save(); renderAll(); exSheet(i); $("sheet").classList.add("on");
+    }
     else if (a === "rest") { S.rest = +b.dataset.s; save(); renderSet(); }
     else if (a === "ics") { if (S.remindOn || S.checkOn) addToCalendar(); }
     else if (a === "export") exportData();
@@ -746,9 +770,9 @@ textarea::placeholder { color: var(--fg-3); }
   function buildSteps(idxList) {
     const p = phaseFor(viewDay), e = entry(viewDay), steps = [];
     idxList.forEach((i, qi) => {
-      const [k, reps, sets, dose] = p.list[i], ex = EX[k], from = Math.min(sets, e.sets[k] || 0) + 1;
+      const [k, , sets] = p.list[i], reps = repsFor(p, i), dose = doseText(p, i), ex = EX[k], from = Math.min(sets, e.sets[k] || 0) + 1;
       const meta = { k, i, sets, reps, dose };
-      steps.push({ ...meta, label: qi ? `下一个：${ex.name}` : "准备", s: qi ? S.rest : 5, kind: "prep", set: from, say: `${qi ? "休息一下，下一个" : "准备"}，${ex.name}，${dose.replace("×", "乘")}` });
+      steps.push({ ...meta, label: qi ? `下一个：${ex.name}` : "准备", s: qi ? S.rest : 5, kind: "prep", set: from, say: `${qi ? "休息一下，下一个" : "准备"}，${ex.name}，${ex.timed ? reps + "分钟" : reps + "次，" + (sets - from + 1) + "组"}` });
       if (ex.timed) { steps.push({ ...meta, label: "平地慢走", s: reps * 60, kind: "work", set: 1, rep: 0, finish: 1, say: "开始慢走，保持正常步幅" }); return; }
       for (let s = from; s <= sets; s++) {
         for (let r = 1; r <= reps; r++) ex.phases.forEach(([label, secs, kind], pi) => {
@@ -763,15 +787,19 @@ textarea::placeholder { color: var(--fg-3); }
   }
   function startRun(idxList) {
     const steps = buildSteps(idxList); if (!steps.length) return;
-    R = { steps, idx: 0, left: 0, paused: false, day: viewDay, tick: null };
+    R = { steps, idx: 0, left: 0, end: 0, remain: 0, lastBeep: -1, paused: false, day: viewDay, tick: null };
     $("timer").hidden = false; document.body.classList.add("locked");
-    try { navigator.wakeLock && navigator.wakeLock.request("screen").then(w => wake = w).catch(() => {}); } catch (e) {}
-    setPause(false); beep(660); enter();
-    R.tick = setInterval(tick, 1000);
+    keepAwake();
+    setPause(false); beep(660); enter(Date.now());
+    R.tick = setInterval(tick, 250);
   }
-  function enter() {
+  function keepAwake() {
+    try { navigator.wakeLock && navigator.wakeLock.request("screen").then(w => wake = w).catch(() => {}); } catch (e) {}
+  }
+  // each step has an absolute end time, so the count stays right even if the phone locks or the app is in the background
+  function enter(at) {
     const st = R.steps[R.idx], ex = EX[st.k];
-    R.left = st.s;
+    R.left = st.s; R.end = at + st.s * 1000; R.lastBeep = -1;
     $("timer").className = "timer " + (st.kind === "work" ? "" : st.kind);
     $("tName").textContent = ex.name; $("tSub").textContent = st.dose;
     $("tCue").textContent = st.label;
@@ -786,25 +814,30 @@ textarea::placeholder { color: var(--fg-3); }
     $("tCount").style.fontSize = big ? "68px" : "";
     $("tArc").setAttribute("stroke-dashoffset", (282.7 * (1 - R.left / st.s)).toFixed(1));
     const ex = EX[st.k];
-    $("tLine").innerHTML = ex.timed ? (st.kind === "prep" ? "目标 5–10 分钟" : `目标 <b>5–10</b> 分钟 · 感觉好可以多走，点「跳过」结束`)
+    $("tLine").innerHTML = ex.timed ? (st.kind === "prep" ? `计划 ${st.reps} 分钟` : `计划 <b>${st.reps}</b> 分钟 · 走完了可以点「跳过」结束`)
       : st.kind === "prep" ? `从第 <b>${st.set}</b> 组开始，共 ${st.sets} 组`
       : st.kind === "rest" && !st.rep ? `下一组：第 <b>${st.set}</b>/${st.sets} 组`
       : `第 <b>${st.set}</b>/${st.sets} 组 · 第 <b>${st.rep}</b>/${st.reps} 次`;
   }
   function tick() {
-    if (R.paused) return;
-    R.left--;
+    if (!R || R.paused) return;
+    const now = Date.now();
+    let guard = 0;
+    while (R && now >= R.end && guard++ < 2000) advance(R.end);
+    if (!R) return;
+    const left = Math.ceil((R.end - now) / 1000);
+    if (left === R.left) return;
+    R.left = left;
     const st = R.steps[R.idx];
-    if (R.left > 0 && R.left <= 3 && st.s >= 10) beep(520, .08);
-    if (R.left <= 0) return advance();
+    if (left > 0 && left <= 3 && st.s >= 10 && R.lastBeep !== left) { R.lastBeep = left; beep(520, .08); }
     paint();
   }
-  function advance() {
+  function advance(at) {
     const st = R.steps[R.idx];
     if (st.finish) { const e = entry(R.day); e.sets[st.k] = Math.max(e.sets[st.k] || 0, st.finish); save(); }
     R.idx++;
     if (R.idx >= R.steps.length) return finish(true);
-    beep(R.steps[R.idx].kind === "work" ? 880 : 600); enter();
+    beep(R.steps[R.idx].kind === "work" ? 880 : 600); enter(at || Date.now());
   }
   function finish(done) {
     clearInterval(R.tick);
@@ -812,21 +845,27 @@ textarea::placeholder { color: var(--fg-3); }
     else try { speechSynthesis.cancel(); } catch (e) {}
     R = null; $("timer").hidden = true; document.body.classList.remove("locked");
     try { wake && wake.release(); } catch (e) {} wake = null;
+    const day = viewDay;
     renderAll();
-    if (done) { toast("训练完成，记得记录疼痛"); }
+    if (done) {
+      toast("训练完成，记得记录疼痛");
+      if (tab === "today" && peek(day) && peek(day).pain == null) setTimeout(() => { const a = $("painAnchor"); a && a.scrollIntoView({ behavior: "smooth", block: "start" }); }, 400);
+    }
   }
   function setPause(p) {
+    if (p && !R.paused) R.remain = Math.max(0, R.end - Date.now());
+    if (!p && R.paused) R.end = Date.now() + R.remain;
     R.paused = p;
     $("tPause").textContent = p ? "继续" : "暂停";
     $("tPause").className = "circ " + (p ? "go" : "pause");
     if (p) try { speechSynthesis.cancel(); } catch (e) {}
   }
   $("tPause").onclick = () => R && setPause(!R.paused);
-  $("tSkip").onclick = () => R && advance();
+  $("tSkip").onclick = () => { if (R) { if (R.paused) setPause(false); advance(Date.now()); } };
   $("tStop").onclick = () => R && finish(false);
 
   // re-render when the app comes back to the foreground on a new day
-  document.addEventListener("visibilitychange", () => { if (!document.hidden && !R) { const d = clampDay(realDay()); if (renderAll.lastDay !== todayStr()) { viewDay = d; renderAll.lastDay = todayStr(); } renderAll(); } });
+  document.addEventListener("visibilitychange", () => { if (!document.hidden && R) { keepAwake(); tick(); } if (!document.hidden && !R) { const d = clampDay(realDay()); if (renderAll.lastDay !== todayStr()) { viewDay = d; renderAll.lastDay = todayStr(); } renderAll(); } });
   renderAll.lastDay = todayStr();
   renderAll();
 
